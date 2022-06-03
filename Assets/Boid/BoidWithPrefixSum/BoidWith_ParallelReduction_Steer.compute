@@ -1,0 +1,63 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// エージェントのデータ構造体
+struct BoidState
+{
+    float3 position;
+    float3 forward;
+};
+
+RWStructuredBuffer<BoidState> boidBuffer : register(u2);            // エージェントのデータ
+RWStructuredBuffer<BoidState> boidPrefixSumBuffer : register(u3);   // エージェント平均値計算用バッファ
+
+uint numBoids;          // エージェントの数
+float deltaTime;        // シミュレーションの経過時間
+half separationWeight;  // 近づきすぎないようにする比重
+half alignmentWeight;   // 整列しあう比重
+half targetWeight;      // 目的地に向かう比重
+half moveSpeed;         // エージェントの移動速度
+float3 targetPosition;  // 目的地
+
+// 0で割り算するのを避けるnormalize関数
+float3 normalizeSafe(float3 v)
+{
+    return length(v) > 0 ? normalize(v) : 0;
+}
+
+[numthreads(32,1,1)] // 32 * 1 * 1のグリッド上にスレッドが実行される
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    // この関数はMetalで利用できない！
+    // 利用できる場合はこれでエージェントの総数を取得します
+    // uint numBoids, stribeBoids;
+    // boidBuffer.GetDimensions(numBoids, stribeBoids);
+
+    uint boidIndex = id.x;                                              // 計算対象のエージェントの配列番号
+    BoidState boidSelf = boidBuffer[boidIndex];                         // 計算対象のエージェントのデータ
+    float3 cellAlignment = boidPrefixSumBuffer[0].forward / numBoids;   // 全体の向きの平均
+    float3 cellSeparation = boidPrefixSumBuffer[0].position / numBoids; // 全体の位置の平均
+
+    // 整列した後のエージェントの向き
+    const float3 alignmentResult = alignmentWeight *
+        normalizeSafe(cellAlignment - boidSelf.forward);
+
+    // 群れから距離を取る場合の進行方向
+    const float3 separationResult = separationWeight *
+        normalizeSafe(boidSelf.position - cellSeparation);
+
+    // ゴールを追いかけた時のエージェント進行方向
+    const float3 targetHeading = targetWeight
+        * normalizeSafe(targetPosition - boidSelf.position);
+
+    // 上記3つの向きの正規ベクトル
+    const float3 normalHeading = normalizeSafe(alignmentResult + separationResult + targetHeading);
+
+    // 時間と速度を考慮した移動ベクトル
+    const float3 nextHeading = normalizeSafe(boidSelf.forward + deltaTime * (normalHeading - boidSelf.forward));
+
+    // エージェントの位置と向きを計算結果で更新する
+    boidSelf.position = boidSelf.position + (nextHeading * moveSpeed * deltaTime);
+    boidSelf.forward = nextHeading;
+    boidBuffer[boidIndex] = boidSelf;
+}

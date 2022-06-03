@@ -1,0 +1,50 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+#define BLOCK_SIZE 32
+
+struct BoidState
+{
+    float3 position;
+    float3 forward;
+};
+
+StructuredBuffer<BoidState> boidBuffer : register(t1);
+RWStructuredBuffer<BoidState> boidPrefixSumBuffer : register(u1);
+uint numBoids;
+
+groupshared BoidState prefix_sums[BLOCK_SIZE];
+
+[numthreads(BLOCK_SIZE, 1, 1)]
+void CSMain(uint3 threadID : SV_GroupThreadID, uint3 dispatchID : SV_DispatchThreadID)
+{
+    // スレッドグループで共有されたバッファに最初の要素をコピー
+    prefix_sums[threadID.x] = boidBuffer[dispatchID.x];
+
+    // 最初の要素の周囲の要素を足し算する
+    // 各スレッドは 1, 2, 4, 8, 16 個離れた場所をチェックする
+    [unroll]
+    for (uint t = 1; t < BLOCK_SIZE; t <<= 1)
+    {
+        // ほかのスレッドの書き込みまちを行う
+        GroupMemoryBarrierWithGroupSync();
+
+        // 足し算を行う
+        BoidState tmp = prefix_sums[threadID.x];
+        if (threadID.x >= t)
+        {
+            const BoidState other = prefix_sums[threadID.x - t];
+            tmp.forward += other.forward;
+            tmp.position += other.position;
+        }
+
+        // ほかのスレッドの読み込みを待つ
+        GroupMemoryBarrierWithGroupSync();
+
+        // 足し算の結果を書き込む
+        prefix_sums[threadID.x] = tmp;
+    }
+
+    // 各スレッドの足し算の結果を書き込む
+    boidPrefixSumBuffer[dispatchID.x] = prefix_sums[threadID.x];
+}

@@ -1,0 +1,59 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+struct BoidState
+{
+    float3 position;
+    float3 forward;
+};
+
+RWStructuredBuffer<BoidState> boidBuffer; // C#からデータを受け取る
+
+uint numBoids;
+float deltaTime;
+half separationWeight;
+half alignmentWeight;
+half targetWeight;
+half moveSpeed;
+float3 targetPosition;
+
+float3 normalizeSafe(float3 v)
+{
+    return length(v) > 0 ? normalize(v) : 0;
+}
+
+[numthreads(8,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // uint numBoids, stribeBoids;
+    // boidBuffer.GetDimensions(numBoids, stribeBoids);
+
+    uint boidIndex = id.x;
+    BoidState boidSelf = boidBuffer[boidIndex];
+    float3 cellAlignment, cellSeparation;
+
+    for (uint i = 0; i < numBoids; ++i)
+    {
+        BoidState boidOther = boidBuffer[i];
+        cellAlignment += boidOther.forward;
+        cellSeparation += boidOther.position;
+    }
+
+    const float3 alignmentResult = alignmentWeight *
+        normalizeSafe((cellAlignment / numBoids) - boidSelf.forward);
+
+    const float3 separationResult = separationWeight *
+        normalizeSafe((boidSelf.position / numBoids) - cellSeparation);
+
+    const float3 targetHeading = targetWeight
+        * normalizeSafe(targetPosition - boidSelf.position);
+
+    const float3 normalHeading = normalizeSafe(alignmentResult + separationResult + targetHeading);
+
+    const float3 nextHeading = normalizeSafe(boidSelf.forward + deltaTime * (normalHeading - boidSelf.forward));
+
+    // Update Boid
+    boidSelf.position = boidSelf.position + (nextHeading * moveSpeed * deltaTime);
+    boidSelf.forward = nextHeading;
+    boidBuffer[boidIndex] = boidSelf;
+}
