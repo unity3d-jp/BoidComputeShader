@@ -7,7 +7,7 @@ struct BoidState
     float3 forward;
 };
 
-RWStructuredBuffer<BoidState> boidBuffer; // C#からデータを受け取る
+RWStructuredBuffer<BoidState> boidBuffer; // get data from C#
 
 uint numBoids;
 float deltaTime;

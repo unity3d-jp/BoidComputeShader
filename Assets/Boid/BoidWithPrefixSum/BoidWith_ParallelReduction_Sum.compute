@@ -18,18 +18,18 @@ groupshared BoidState prefix_sums[BLOCK_SIZE];
 [numthreads(BLOCK_SIZE, 1, 1)]
 void CSMain(uint3 threadID : SV_GroupThreadID, uint3 dispatchID : SV_DispatchThreadID)
 {
-    // スレッドグループで共有されたバッファに最初の要素をコピー
+    // copy first element to buffer shared by thread group
     prefix_sums[threadID.x] = boidBuffer[dispatchID.x];
 
-    // 最初の要素の周囲の要素を足し算する
-    // 各スレッドは 1, 2, 4, 8, 16 個離れた場所をチェックする
+    // Add the elements around the first element
+    // Each thread checks 1,2,4,8,16 apart
     [unroll]
     for (uint t = 1; t < BLOCK_SIZE; t <<= 1)
     {
-        // ほかのスレッドの書き込みまちを行う
+        // write the wrong thread
         GroupMemoryBarrierWithGroupSync();
 
-        // 足し算を行う
+        // add up
         BoidState tmp = prefix_sums[threadID.x];
         if (threadID.x >= t)
         {
@@ -38,13 +38,13 @@ void CSMain(uint3 threadID : SV_GroupThreadID, uint3 dispatchID : SV_DispatchThr
             tmp.position += other.position;
         }
 
-        // ほかのスレッドの読み込みを待つ
+        // wait for other threads to load
         GroupMemoryBarrierWithGroupSync();
 
-        // 足し算の結果を書き込む
+        // write the addition results
         prefix_sums[threadID.x] = tmp;
     }
 
-    // 各スレッドの足し算の結果を書き込む
+    // write the sum of each thread
     boidPrefixSumBuffer[dispatchID.x] = prefix_sums[threadID.x];
 }

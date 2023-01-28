@@ -1,62 +1,62 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
 
-// エージェントのデータ構造体
+// data structure of agent
 struct BoidState
 {
     float3 position;
     float3 forward;
 };
 
-RWStructuredBuffer<BoidState> boidBuffer : register(u2);            // エージェントのデータ
-RWStructuredBuffer<BoidState> boidPrefixSumBuffer : register(u3);   // エージェント平均値計算用バッファ
+RWStructuredBuffer<BoidState> boidBuffer : register(u2);            // agent data
+RWStructuredBuffer<BoidState> boidPrefixSumBuffer : register(u3);   // buffer for calculating agent average value
 
-uint numBoids;          // エージェントの数
-float deltaTime;        // シミュレーションの経過時間
-half separationWeight;  // 近づきすぎないようにする比重
+uint numBoids;          // number of agents
+float deltaTime;        // elapsed time of simulation
+half separationWeight;  // force that keeps agent from getting too close
 half alignmentWeight;   // 整列しあう比重
-half targetWeight;      // 目的地に向かう比重
-half moveSpeed;         // エージェントの移動速度
-float3 targetPosition;  // 目的地
+half targetWeight;      // weight toward destination
+half moveSpeed;         // speed of agent
+float3 targetPosition;  // destination
 
-// 0で割り算するのを避けるnormalize関数
+// normalize function that avoids dividing by 0
 float3 normalizeSafe(float3 v)
 {
     return length(v) > 0 ? normalize(v) : 0;
 }
 
-[numthreads(32,1,1)] // 32 * 1 * 1のグリッド上にスレッドが実行される
+[numthreads(32,1,1)] // threads run on 32 x 1 x 1 grid
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
-    // この関数はMetalで利用できない！
-    // 利用できる場合はこれでエージェントの総数を取得します
+    // not available on metal
+    // get total number of agents
     // uint numBoids, stribeBoids;
     // boidBuffer.GetDimensions(numBoids, stribeBoids);
 
-    uint boidIndex = id.x;                                              // 計算対象のエージェントの配列番号
-    BoidState boidSelf = boidBuffer[boidIndex];                         // 計算対象のエージェントのデータ
-    float3 cellAlignment = boidPrefixSumBuffer[0].forward / numBoids;   // 全体の向きの平均
-    float3 cellSeparation = boidPrefixSumBuffer[0].position / numBoids; // 全体の位置の平均
+    uint boidIndex = id.x;                                              // array number of agents to be calculated
+    BoidState boidSelf = boidBuffer[boidIndex];                         // agent data to be calculated
+    float3 cellAlignment = boidPrefixSumBuffer[0].forward / numBoids;   // average overall orientation
+    float3 cellSeparation = boidPrefixSumBuffer[0].position / numBoids; // average overall position
 
-    // 整列した後のエージェントの向き
+    // agent orientation after alignment
     const float3 alignmentResult = alignmentWeight *
         normalizeSafe(cellAlignment - boidSelf.forward);
 
-    // 群れから距離を取る場合の進行方向
+    // agent position after separation
     const float3 separationResult = separationWeight *
         normalizeSafe(boidSelf.position - cellSeparation);
 
-    // ゴールを追いかけた時のエージェント進行方向
+    // the direction in which an agent travels towards
     const float3 targetHeading = targetWeight
         * normalizeSafe(targetPosition - boidSelf.position);
 
-    // 上記3つの向きの正規ベクトル
+    // normalize sum of above 3 vectors
     const float3 normalHeading = normalizeSafe(alignmentResult + separationResult + targetHeading);
 
-    // 時間と速度を考慮した移動ベクトル
+    // direction to face regarding time and speed
     const float3 nextHeading = normalizeSafe(boidSelf.forward + deltaTime * (normalHeading - boidSelf.forward));
 
-    // エージェントの位置と向きを計算結果で更新する
+    // update agent location and orientation with calculation results
     boidSelf.position = boidSelf.position + (nextHeading * moveSpeed * deltaTime);
     boidSelf.forward = nextHeading;
     boidBuffer[boidIndex] = boidSelf;
