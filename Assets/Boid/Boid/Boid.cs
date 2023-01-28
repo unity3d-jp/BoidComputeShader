@@ -11,13 +11,13 @@ using Random = Unity.Mathematics.Random;
 public class Boid : MonoBehaviour
 {
     [VFXType(VFXTypeAttribute.Usage.GraphicsBuffer)]
-    public struct BoidState
+    public struct BoidState // boid state data to pack as GraphicsBuffer
     {
         public Vector3 Position;
         public Vector3 Forward;
     }
 
-    [Serializable]
+    [Serializable] // boid properties class
     public class BoidConfig
     {
         public float moveSpeed = 1f;
@@ -31,14 +31,19 @@ public class Boid : MonoBehaviour
         public Transform boidTarget;
     }
 
+    // number of boids to spawn
     public int boidCount = 32;
 
+    // used to populate boids, used at initialization
     public float3 boidExtent = new(32f, 32f, 32f);
 
+    // compute shader file to bind
     public ComputeShader BoidComputeShader;
 
+    // boid properties
     public BoidConfig boidConfig;
 
+    // vfx graph assets to bind
     VisualEffect _boidVisualEffect;
     GraphicsBuffer _boidBuffer;
     int _kernelIndex;
