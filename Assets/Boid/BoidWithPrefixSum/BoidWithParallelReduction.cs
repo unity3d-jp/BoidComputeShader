@@ -6,17 +6,24 @@ using UnityEngine.VFX;
 [RequireComponent(typeof(VisualEffect))]
 public class BoidWithParallelReduction : MonoBehaviour
 {
+    // number of boids to spawn
     public int boidCount = 32;
 
+    // used to populate boids, used at initialization
     public float3 boidExtent = new(32f, 32f, 32f);
 
+    // boid properties
     public Boid.BoidConfig boidConfig;
 
+    // compute shader file to dispatch
     public ComputeShader boidParallelReductionComputeShader;
+    //
     public int prefixSumBlockSize = 32;
 
+    // compute shader file to dispatch steering calculations
     public ComputeShader boidSteerComputeShader;
 
+    // vfx graph assets to bind
     VisualEffect _boidVisualEffect;
     int _boidCountPoT;
     GraphicsBuffer _boidBuffer;
