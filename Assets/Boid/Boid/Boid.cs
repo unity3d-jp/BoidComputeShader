@@ -10,7 +10,7 @@ using Random = Unity.Mathematics.Random;
 [RequireComponent(typeof(VisualEffect))]
 public class Boid : MonoBehaviour
 {
-    [VFXType(VFXTypeAttribute.Usage.GraphicsBuffer)]
+    [VFXType(VFXTypeAttribute.Usage.GraphicsBuffer)] // Usable as a GraphicsBuffer data type.
     public struct BoidState // boid state data to pack as GraphicsBuffer
     {
         public Vector3 Position;

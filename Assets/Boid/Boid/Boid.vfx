@@ -13,14 +13,54 @@ MonoBehaviour:
   m_Name: VFXUI
   m_EditorClassIdentifier: 
   groupInfos: []
-  stickyNoteInfos: []
+  stickyNoteInfos:
+  - title: Graphics Buffer
+    position:
+      serializedVersion: 2
+      x: 151
+      y: 551
+      width: 562
+      height: 241
+    contents: unpack graphics buffer passed from Boid.cs
+    theme: Classic
+    textSize: Small
+  - title: 'Orient: Advanced'
+    position:
+      serializedVersion: 2
+      x: 1397
+      y: 959
+      width: 310
+      height: 145
+    contents: 'Particles orient to a custom particle space defined using two specified
+      axes. The first axis is immutable and the Block uses the second axis to derive
+      the third. It then recalculates the second axis to create an orthogonal particle
+      space.
+
+
+      This is an advanced mode and you can use it to create custom
+      orientation behaviors.'
+    theme: Classic
+    textSize: Small
+  - title: 'Orient: Fixed Axis'
+    position:
+      serializedVersion: 2
+      x: 1397
+      y: 1109
+      width: 311
+      height: 108
+    contents: "Particles orient themselves on the specified \u2018up\u2019 axis and
+      rotate on it to face the camera. This is useful for effects like grass where
+      the up axis is generally known and particles should rotate on it to face the
+      camera without falling flat if observed from the top."
+    theme: Classic
+    textSize: Small
   categories: []
   uiBounds:
     serializedVersion: 2
-    x: 183
+    x: 151
     y: -190
-    width: 1184
-    height: 1439
+    width: 1557
+    height: 1460
 --- !u!114 &114350483966674976
 MonoBehaviour:
   m_ObjectHideFlags: 1
